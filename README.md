@@ -1,8 +1,4 @@
-# vinext-starter
-
-A clean full-stack starter running on
-[vinext](https://github.com/cloudflare/vinext), with optional Cloudflare D1 and
-Drizzle support.
+# Calculator Experiment V1
 
 ## Prerequisites
 
@@ -16,85 +12,57 @@ npm run dev
 npm run build
 ```
 
-This starter does not use `wrangler.jsonc`.
+## About
 
-## Included Shape
+This is the first iteration of an experiment to see how well ChatGPT can design and implement a calculator app. The command it was given was very simple
+and straightforward:
 
-- edit site code under `app/`
-- `.openai/hosting.json` declares optional Sites D1 and R2 bindings
-- `vite.config.ts` simulates declared bindings for local development
-- `db/schema.ts` starts intentionally empty
-- `examples/d1/` contains an optional D1 example surface
-- `drizzle.config.ts` supports local migration generation when needed
-
-## Workspace Auth Headers
-
-Signed-in visitors receive both `oai-authenticated-user-id` and `oai-authenticated-user-email`. Private Sites require every visitor to sign in; public Sites may also have anonymous visitors, for whom neither header is present.
-
-The user ID is stable for the same user on the same Site and different across Sites. Email and name are intended for display or contact purposes.
-
-SIWC-authenticated workspace sites may also receive
-`oai-authenticated-user-full-name` when the user's SIWC profile has a non-empty
-`name` claim. The full-name value is percent-encoded UTF-8 and is accompanied by
-`oai-authenticated-user-full-name-encoding: percent-encoded-utf-8`.
-
-Treat the full name as optional and fall back to email when it is absent:
-
-```tsx
-import { headers } from "next/headers";
-
-export default async function Home() {
-  const requestHeaders = await headers();
-  const userId = requestHeaders.get("oai-authenticated-user-id");
-  const email = requestHeaders.get("oai-authenticated-user-email");
-  const encodedFullName = requestHeaders.get("oai-authenticated-user-full-name");
-  const fullName =
-    encodedFullName &&
-    requestHeaders.get("oai-authenticated-user-full-name-encoding") ===
-      "percent-encoded-utf-8"
-      ? decodeURIComponent(encodedFullName)
-      : null;
-
-  const displayName = fullName ?? email;
-  // ...
-}
+```
+Make me a simple calculator in React. The usual 3x3 orientation of numbers, with zero at the bottom center, decimal to the left of that, equal to the 
+right, clear at the top left, and the 4 basic operations along the right side of it all. The top having a display to show the current calculation or 
+solution.
 ```
 
-## Optional Dispatch-Owned ChatGPT Sign-In
+This first experiment was just to see what it could produce given the smallest possible guidelines.
 
-Import the ready-to-use helpers from `app/chatgpt-auth.ts` when the site needs
-optional or required ChatGPT sign-in:
+## Results
 
-- Use `getChatGPTUser()` for optional signed-in UI.
-- Use `requireChatGPTUser(returnTo)` for server-rendered pages that should send
-  anonymous visitors through Sign in with ChatGPT.
-- Use `chatGPTSignInPath(returnTo)` and `chatGPTSignOutPath(returnTo)` for
-  browser links or actions.
-- Pass a same-origin relative `returnTo` path for the destination after sign-in
-  or sign-out. The helper validates and safely encodes it.
-- Mark protected pages with `export const dynamic = "force-dynamic"` because
-  they depend on per-request identity headers.
+### UI and Functionality
 
-Dispatch owns `/signin-with-chatgpt`, `/signout-with-chatgpt`, `/callback`, the
-OAuth cookies, and identity header injection. Do not implement app routes for
-those reserved paths. Routes that do not import and call the helper remain
-anonymous-compatible.
+Visually, it did a very good job making a very sleek looking calculator, reminiscent of a smartphone's. Rounded corners, operations on the right, an 
+orange "=" button. It also gave the individual buttons a slight sense of depth with a shadow under the bottom border. 
 
-SIWC establishes identity only; it does not prove workspace membership. Use the
-Sites hosting platform's access policy controls for workspace-wide restrictions,
-or enforce explicit server-side membership or allowlist checks.
+The top display showing the current calculation has the most problems visually and functionally. When starting with a blank slate, the first number 
+inputted shows at the bottom line. However, once an operation is selected, the top line becomes the number and that operation, while the bottom line 
+stays as just the number. Input another number, the bottom line changes, the top line stays the same. Then input another operation it automatically 
+calculates the answer from the previous operation then put's that number plus the new operation in the top line.  
 
-Use SIWC for account pages, user-specific dashboards, saved records, and write
-actions tied to the current ChatGPT user. Leave public content anonymous.
+This has two issues. 
+1. It looks confusing. The bottom line sometimes showing the answer and sometimes showing the most recent input makes it hard to tell what step you're on as a user.
+1. It cannot do order of operation properly. 5 - 5 x 6 should equal -25. However, it will always calculate the 5 - 5 first, making it a 0 x 6 and outputting 0.
 
-## Useful Commands
+You can operate the app through the keyboard, and it has visual indicators of what buttons are hovered or focused, but the inability to navigate the 
+calculator keyboard with arrow keys is also an oversight.
 
-- `npm run dev`: start local development
-- `npm run build`: verify the vinext build output
-- `npm test`: build the starter and verify its rendered loading skeleton
-- `npm run db:generate`: generate Drizzle migrations after schema changes
+Another visual issue comes when taking a non-multiple of 3 and dividing it by 3. It knows to cut off/round the repeating decimal, but the text itself 
+gets much bigger and bolder. It doesn't break out of the container, but it is a very noticable since the font reverst back to it's original smaller 
+version on typing in another number.
 
-## Learn More
+### Code
 
-- [vinext Documentation](https://github.com/cloudflare/vinext)
-- [Drizzle D1 Guide](https://orm.drizzle.team/docs/get-started/d1-new)
+The agent did a good job with code simplicity for the main app. Most of the code is in CSS styling, with around 175 lines in one css file, and the tsx
+file that renders the app coming in at around 150 lines. It also seems to have good practices when it comes to React hooks, including having a cleanup
+in a useEffect hook. The code is also fairly neat and readable, large blocks of reusable logic split into their own properly named functions. I would
+like if it had commented it's files for more ease of understanding.
+
+But the main issue is in the project architecture. As this is just a React calculator, with all state in the browser, nothing getting saved or stored, 
+there shouldn't be much outside the page, layout, and global files, plus whatever dependencies are needed for compliation and build. However, it 
+brought in supplemental directories such as "/drizzle", "/examples", and "/db". All of these are either related to potential api's or databases, which
+are not part of this first project.
+
+Upon asking the agent, it said it simply copied all the React starter code from a pre-provided skill for creating React apps in Codex. The cause is
+understandable but also highlights how quickly an agentic coding tool will proactively add unwanted or uneeded elements into a codebase. While these
+additions aren't harmful, they are clutter and do not make sense in the context of this simple app.
+
+## To test next
+Repeatability - does it create the exact same calculator in a new command?
